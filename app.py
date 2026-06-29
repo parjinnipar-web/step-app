@@ -22,13 +22,13 @@ def load_data(url):
 
 df_db = load_data(SHEET_URL) if SHEET_URL else pd.DataFrame(columns=["วันที่", "เดือน", "ชื่อผู้แข่งขัน", "เวลาที่ส่ง", "ก้าวจากรูป", "ก้าวที่หัก", "ก้าวสุทธิ", "คะแนนดิบ"])
 
-st.header("📸 อัปโหลดรูปหลักฐานก้าวเดิน")
+st.header("📸 อัปโหลดรูป")
 selected_player = st.selectbox("👤 เลือกชื่อของคุณ:", PLAYERS)
 now = datetime.datetime.now()
 current_month_str = now.strftime("%Y-%m")
 current_date_obj = now.date()
 
-uploaded_file = st.file_uploader("📷 เลือกรูปภาพหน้าจอนับก้าว:", type=["png", "jpg", "jpeg"])
+uploaded_file = st.file_uploader("📷 เลือกรูปภาพหน้าจอ:", type=["png", "jpg", "jpeg"])
 
 if st.button("🚀 ส่งข้อมูลและคำนวณผล"):
     if uploaded_file is None:
