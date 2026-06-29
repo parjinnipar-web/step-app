@@ -5,7 +5,7 @@ from google import genai
 from PIL import Image
 
 st.set_page_config(page_title="Step App", layout="wide", page_icon="🏆")
-st.title("🏃‍♂️ นับก้าว")
+st.title("🏆 นับก้าว")
 
 GEMINI_API_KEY = st.sidebar.text_input("🔑 Gemini API Key:", type="password")
 SHEET_URL = st.sidebar.text_input("🔗 ลิงก์ Google Sheets:", type="password")
