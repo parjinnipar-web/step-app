@@ -6,7 +6,7 @@ import os
 from google import genai
 from PIL import Image
 
-st.set_page_config(page_title="Step App", layout="wide", page_icon="🏃‍♂️")
+st.set_page_config(page_title="Step App", layout="wide", page_icon="🏆")
 st.title("🏃‍♂️ แอปแข่งนับก้าว")
 
 # --- 🔐 ดึงรหัส Secrets หลังบ้าน ---
@@ -72,7 +72,7 @@ today_date = now_thailand.date()
 current_month_str = now_thailand.strftime("%Y-%m")
 
 # --- 📥 เมนูฟอร์มหลักสำหรับการอัปโหลดหลักฐาน ---
-st.header("📤 ส่งผลก้าวเดินประจำวัน (เดดไลน์ 20:02 น. บนหน้าปัดรูปถ่าย)")
+st.header("📤 ส่งผลก้าวเดินประจำวัน ")
 st.warning("⚠️ เงื่อนไขกติกา: ส่งก่อน 24:00 น. เท่านั้น")
 
 selected_player = st.selectbox("👤 เลือกชื่อของคุณ:", PLAYERS)
