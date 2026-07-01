@@ -7,7 +7,7 @@ from google import genai
 from PIL import Image
 
 st.set_page_config(page_title="Step App", layout="wide", page_icon="🏃‍♂️")
-st.title("🏃‍♂️ แอปแข่งนับก้าวเดิน 4 ยอดกุมาร (A, PAR, TATA, NADA)")
+st.title("🏃‍♂️ แอปแข่งนับก้าว")
 
 # --- 🔐 ดึงรหัส Secrets หลังบ้าน ---
 if "GEMINI_API_KEY" in st.secrets and "SHEET_URL" in st.secrets:
@@ -73,7 +73,7 @@ current_month_str = now_thailand.strftime("%Y-%m")
 
 # --- 📥 เมนูฟอร์มหลักสำหรับการอัปโหลดหลักฐาน ---
 st.header("📤 ส่งผลก้าวเดินประจำวัน (เดดไลน์ 20:02 น. บนหน้าปัดรูปถ่าย)")
-st.warning("⚠️ เงื่อนไขกติกา: สามารถอัปโหลดส่งย้อนหลังได้ตลอดเวลาของวันนั้น แต่ต้องส่งก่อน 24:00 น. เท่านั้น")
+st.warning("⚠️ เงื่อนไขกติกา: ส่งก่อน 24:00 น. เท่านั้น")
 
 selected_player = st.selectbox("👤 เลือกชื่อของคุณ:", PLAYERS)
 uploaded_file = st.file_uploader("📷 แนบรูปภาพแคปหน้าจอ (ระบบจะสแกนเวลาและจำนวนก้าวจากในรูปภาพ):", type=["png", "jpg", "jpeg"])
