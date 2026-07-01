@@ -1,3 +1,5 @@
 google-genai
 pandas
 pillow
+st-theme
+streamlit-gsheets
