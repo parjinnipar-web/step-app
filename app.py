@@ -89,7 +89,7 @@ if st.button("🚀 ส่งข้อมูลและคำนวณผล"):
     elif not GEMINI_API_KEY or not SPREADSHEET_ID:
         st.error("❌ กรุณากรอกรหัส Key และ Spreadsheet ID ให้เรียบร้อยก่อน")
     else:
-        with st.spinner("🤖 AI กำลังเปิดตาอ่านรูปภาพของคุณ..."):
+        with st.spinner("🤖 AI กำลังอ่านรูปภาพของคุณ..."):
             try:
                 client = genai.Client(api_key=GEMINI_API_KEY)
                 image = Image.open(uploaded_file)
