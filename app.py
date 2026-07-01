@@ -2,33 +2,42 @@ import streamlit as st
 import datetime
 import math
 import pandas as pd
+import os
 from google import genai
 from PIL import Image
-from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="Step App", layout="wide", page_icon="🏃‍♂️")
-st.title("🏃‍♂️ แข่งนับก้าวเดิน")
+st.title("🏃‍♂️ แอปแข่งนับก้าวเดิน 4 ยอดกุมาร (A, PAR, TATA, NADA)")
 
-# --- ดึงรหัสถาวรจาก Secrets หลังบ้าน ---
+# --- 🔐 ระบบดึงค่ารหัสคีย์ AI จาก Secrets หลังบ้าน ---
 if "GEMINI_API_KEY" in st.secrets:
     GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 else:
     GEMINI_API_KEY = st.sidebar.text_input("🔑 ใส่ Gemini API Key:", type="password")
 
 PLAYERS = ["A", "PAR", "TATA", "NADA"]
+DATA_FILE = "central_step_database.csv"
 
-# --- 📊 ระบบเชื่อมต่อ Google Sheets โดยตรง (GSheetsConnection) ---
-try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
-    df_db = conn.read(ttl="0d") # ดึงข้อมูลล่าสุดแบบไม่เปิดแคช
-    # แปลงโครงสร้างวันที่ให้ถูกต้อง
-    if not df_db.empty and 'วันที่' in df_db.columns:
-        df_db['วันที่'] = pd.to_datetime(df_db['วันที่']).dt.date
-except Exception as e:
-    df_db = pd.DataFrame(columns=["วันที่", "เดือน", "ชื่อ", "เวลา", "ก้าว", "ก้าวที่ถูกหัก", "ก้าวรวม", "คะแนน"])
+# --- 📁 ฟังก์ชันจัดการฐานข้อมูลแบบถาวรออนไลน์กลางคลาวด์ ---
+def load_global_data():
+    if os.path.exists(DATA_FILE):
+        try:
+            df = pd.read_csv(DATA_FILE)
+            df['วันที่'] = pd.to_datetime(df['วันที่']).dt.date
+            return df
+        except:
+            pass
+    return pd.DataFrame(columns=["วันที่", "เดือน", "ชื่อ", "เวลา", "ก้าว", "ก้าวที่ถูกหัก", "ก้าวรวม", "คะแนน"])
 
-# ฟังก์ชันระบบคำนวณอันดับแจกคะแนน 4,3,2,1 ประจำวัน
-def update_daily_ranking_points(df, target_date):
+def save_global_data(df):
+    df.to_csv(DATA_FILE, index=False)
+
+# โหลดฐานข้อมูลหลักของกลุ่ม
+if "db_data" not in st.session_state:
+    st.session_state.db_data = load_global_data()
+
+# --- 📊 ฟังก์ชันแจกคะแนนแต้มดิบประจำวัน (4,3,2,1 หรือ 0 สำหรับคนเบี้ยว) ---
+def calculate_daily_points(df, target_date):
     day_filter = df['วันที่'] == target_date
     day_records = df[day_filter]
     if day_records.empty:
@@ -36,6 +45,8 @@ def update_daily_ranking_points(df, target_date):
         
     active_subs = day_records[day_records['ก้าว'] > 0]
     submitted_players = active_subs['ชื่อ'].tolist()
+    
+    # จัดอันดับตามก้าวรวมจากมากไปน้อย
     sorted_records = active_subs.sort_values(by="ก้าวรวม", ascending=False)
     
     points_pool = [4, 3, 2, 1]
@@ -43,6 +54,7 @@ def update_daily_ranking_points(df, target_date):
         assigned_point = points_pool[idx] if idx < len(points_pool) else 1
         df.loc[row_idx, "คะแนน"] = assigned_point
         
+    # คนที่ไม่ส่งรูปภายในวันนั้น (กติกาได้ 0 คะแนนอัตโนมัติ)
     for p in PLAYERS:
         if p not in submitted_players:
             df = df[~((df['ชื่อ'] == p) & (df['วันที่'] == target_date))]
@@ -54,13 +66,12 @@ def update_daily_ranking_points(df, target_date):
             df = pd.concat([df, pd.DataFrame([new_blank])], ignore_index=True)
     return df
 
-st.header("📸 อัปโหลดรูปก้าวเดิน")
-selected_player = st.selectbox("👤 เลือกชื่อผู้ใช้งานของคุณ:", PLAYERS)
-
 now = datetime.datetime.now()
 current_date_obj = now.date()
 current_month_str = now.strftime("%Y-%m")
 
+st.header("📸 อัปโหลดรูปหลักฐานก้าวเดินประจำวัน")
+selected_player = st.selectbox("👤 เลือกชื่อผู้ใช้งานของคุณ:", PLAYERS)
 uploaded_file = st.file_uploader("📷 แนบรูปภาพแคปหน้าจอนับก้าวเดิน:", type=["png", "jpg", "jpeg"])
 
 if st.button("🚀 ส่งข้อมูลและคำนวณผล"):
@@ -74,9 +85,9 @@ if st.button("🚀 ส่งข้อมูลและคำนวณผล"):
                 client = genai.Client(api_key=GEMINI_API_KEY)
                 image = Image.open(uploaded_file)
                 prompt = (
-                    "Look at this fitness tracker screenshot. Extract 2 values: "
-                    "1. Total step count number. "
-                    "2. Clock time on the status bar (Format HH:MM). "
+                    "Look at this fitness tracker screenshot. Extract 2 values:\n"
+                    "1. Total step count number.\n"
+                    "2. Clock time on the status bar (Format HH:MM).\n"
                     "Return exactly as: STEPS:number|TIME:HH:MM"
                 )
                 response = client.models.generate_content(model='gemini-2.5-flash', contents=[image, prompt])
@@ -110,30 +121,32 @@ if st.button("🚀 ส่งข้อมูลและคำนวณผล"):
                     "คะแนน": 0
                 }
                 
-                # ลบข้อมูลเก่าของวันนี้ออกก่อนเพื่อป้องกันการส่งซ้ำแล้วแถวซ้อนกัน
-                df_updated = df_db[~((df_db['ชื่อ'] == selected_player) & (df_db['วันที่'] == current_date_obj))]
-                df_updated = pd.concat([df_updated, pd.DataFrame([new_row])], ignore_index=True)
-                df_updated = update_daily_ranking_points(df_updated, current_date_obj)
+                # อัปเดตลงฐานข้อมูลถาวรส่วนกลางคลาวด์
+                df_working = st.session_state.db_data
+                df_working = df_working[~((df_working['ชื่อ'] == selected_player) & (df_working['วันที่'] == current_date_obj))]
+                df_working = pd.concat([df_working, pd.DataFrame([new_row])], ignore_index=True)
+                df_working = calculate_daily_points(df_working, current_date_obj)
                 
-                # บังคับส่งข้อมูลเซฟยัดลง Google Sheets ออนไลน์ทันทีข้ามระบบ!
-                conn.update(spreadsheet=st.secrets["connections"]["gsheets"]["spreadsheet"], data=df_updated)
-                st.cache_data.clear() # ล้างความจำแคชเก่า
+                st.session_state.db_data = df_working
+                save_global_data(df_working)
                 
-                st.success(f"🎉 สำเร็จ! AI อ่านเวลาในรูปได้ {time_str} น. ยอดเดินทั้งหมด {ai_steps:,} ก้าว บันทึกข้อมูลลง Google Sheets สำเร็จแล้ว!")
-                st.rerun() # รีโหลดหน้าจอเพื่อแสดงผลข้อมูลล่าสุดทันที
+                st.success(f"🎉 สำเร็จ! AI อ่านเวลาในรูปได้ {time_str} น. ยอดเดินทั้งหมด {ai_steps:,} ก้าว บันทึกข้อมูลเรียบร้อยแล้ว!")
+                st.rerun()
                 
             except Exception as e:
-                st.error(f"❌ ระบบประมวลผลหรือเซฟข้อมูลขัดข้อง: {e}")
+                st.error(f"❌ ระบบ AI ขัดข้อง กรุณาลองใหม่อีกครั้ง: {e}")
+
+df_final = st.session_state.db_data
 
 st.markdown("---")
-st.header(f"📊 สสรุปสถิติคะแนนประจำเดือน ({current_month_str})")
+st.header(f"📊 สรุปสถิติคะแนนประจำเดือน ({current_month_str})")
 
-all_months = sorted(df_db['เดือน'].unique()) if not df_db.empty else [current_month_str]
+all_months = sorted(df_final['เดือน'].unique()) if not df_final.empty else [current_month_str]
 if current_month_str not in all_months:
     all_months.append(current_month_str)
 selected_month = st.selectbox("📆 เลือกดูข้อมูลประจำเดือน:", all_months, index=all_months.index(current_month_str))
 
-month_df = df_db[df_db['เดือน'] == selected_month] if not df_db.empty else pd.DataFrame()
+month_df = df_final[df_final['เดือน'] == selected_month] if not df_final.empty else pd.DataFrame()
 
 st.subheader(f"🏆 ทำเนียบอันดับคะแนนสะสมประจำเดือน {selected_month}")
 summary_metrics = []
